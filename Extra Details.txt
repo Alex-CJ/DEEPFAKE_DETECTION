@@ -1,0 +1,17 @@
+Extra Details:
+
+dataset is from 
+
+https://www.kaggle.com/datasets/xhlulu/140k-real-and-fake-faces
+
+SETUP YOUR FOLDERS:
+data/
+├── train/
+│   ├── real/     (your real training images)
+│   └── fake/     (your fake training images)
+├── val/
+│   ├── real/     (your real validation images)
+│   └── fake/     (your fake validation images)
+└── test/
+    ├── real/     (your real test images)
+    └── fake/     (your fake test images)

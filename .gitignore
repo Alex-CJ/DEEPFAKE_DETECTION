@@ -1,0 +1,28 @@
+# Virtual environment
+venv/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Full 140k-image training dataset - large and reproducible from the Kaggle
+# link in README.md (https://www.kaggle.com/datasets/xhlulu/140k-real-and-fake-faces)
+data/
+
+# Very large file (~380MB) from an earlier exploratory approach, not used by
+# the final pipeline (see README.md)
+ffhq.pkl
+
+# Vendored NVIDIA repo (its own git repo) - clone separately if needed:
+# git clone https://github.com/NVlabs/stylegan2-ada-pytorch.git
+stylegan2-ada-pytorch/
+
+# Large intermediate/duplicate checkpoints from training - only the best
+# checkpoint (models/best_detector.pth) and the copy used by the web demo
+# (huggingface_space/best_detector.pth) are kept
+models/final_detector.pth
+models/finetuned_detector.pth
+models/gan_discriminator.pth
+models/generator.pth
+models/final_generator.pth
