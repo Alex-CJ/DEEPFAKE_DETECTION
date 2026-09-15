@@ -4,8 +4,8 @@ A university project (COMP1827) evaluating whether the discriminator from a
 DCGAN-style network — trained adversarially and then fine-tuned — can be
 repurposed as a deepfake/AI-generated face detector.
 
-**Try it live:** _add your Render URL here once deployed, e.g.
-`https://deepfake-face-detector.onrender.com`_
+**Try it live:** [deepfake-detection-l69f.onrender.com](https://deepfake-detection-l69f.onrender.com)
+(free tier — if it's been idle it may take 30-60s to wake up)
 
 Full write-up: [`001366584_COMP1827_REPORT.pdf`](./001366584_COMP1827_REPORT.pdf)
 
