@@ -1,118 +1,40 @@
 """
 GAN-Discriminator Deepfake Detector - Gradio demo
 
-Loads the trained discriminator (models/best_detector.pth from the main
-project, copied alongside this file as best_detector.pth) and serves it
-through a simple image-upload interface.
-
-Model architecture is duplicated from detector.py so this folder can be
-deployed on its own (e.g. as a Hugging Face Space) without depending on
-the rest of the repository.
+Runs inference through ONNX Runtime instead of PyTorch. The full PyTorch
+stack uses ~500MB of RAM just on import, which doesn't fit in a 512MB
+hosting tier (Render's free plan); onnxruntime + numpy + pillow together
+use a fraction of that. The .onnx file was exported once, offline, from
+models/best_detector.pth (see export_onnx.py) - training still uses the
+full PyTorch pipeline in detector.py, only this demo is PyTorch-free.
 """
-import os
-import torch
-import torch.nn as nn
+import numpy as np
+import onnxruntime as ort
 import gradio as gr
-from torchvision import transforms
+from PIL import Image
 
-MODEL_PATH = "best_detector.pth"
+MODEL_PATH = "best_detector.onnx"
 IMAGE_SIZE = 64
 
-
-# ============================================================================
-# NETWORK ARCHITECTURE (must match detector.py exactly to load the weights)
-# ============================================================================
-class SelfAttention(nn.Module):
-    def __init__(self, in_channels):
-        super(SelfAttention, self).__init__()
-        self.query = nn.Conv2d(in_channels, in_channels // 8, 1)
-        self.key = nn.Conv2d(in_channels, in_channels // 8, 1)
-        self.value = nn.Conv2d(in_channels, in_channels, 1)
-        self.gamma = nn.Parameter(torch.zeros(1))
-
-    def forward(self, x):
-        batch, channels, height, width = x.size()
-        query = self.query(x).view(batch, -1, height * width).permute(0, 2, 1)
-        key = self.key(x).view(batch, -1, height * width)
-        attention = torch.softmax(torch.bmm(query, key), dim=-1)
-        value = self.value(x).view(batch, -1, height * width)
-        out = torch.bmm(value, attention.permute(0, 2, 1))
-        out = out.view(batch, channels, height, width)
-        return self.gamma * out + x
+session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+input_name = session.get_inputs()[0].name
 
 
-class Discriminator(nn.Module):
-    def __init__(self):
-        super(Discriminator, self).__init__()
-        norm = nn.utils.spectral_norm
-
-        self.features = nn.Sequential(
-            norm(nn.Conv2d(3, 64, 4, 2, 1)),
-            nn.LeakyReLU(0.2),
-
-            norm(nn.Conv2d(64, 128, 4, 2, 1)),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
-
-            norm(nn.Conv2d(128, 256, 4, 2, 1)),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2),
-            SelfAttention(256),
-
-            norm(nn.Conv2d(256, 512, 4, 2, 1)),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2),
-            nn.Dropout2d(0.3),
-
-            norm(nn.Conv2d(512, 1024, 4, 2, 1)),
-            nn.BatchNorm2d(1024),
-            nn.LeakyReLU(0.2),
-            nn.Dropout2d(0.3)
-        )
-
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(1024 * 2 * 2, 256),
-            nn.LeakyReLU(0.2),
-            nn.Dropout(0.5),
-            nn.Linear(256, 1),
-            nn.Sigmoid()
-        )
-
-    def forward(self, x):
-        features = self.features(x)
-        return self.classifier(features)
+def preprocess(image: Image.Image) -> np.ndarray:
+    """Match the val/test transform in detector.py: resize, [0,1], normalize to [-1,1]."""
+    image = image.convert("RGB").resize((IMAGE_SIZE, IMAGE_SIZE), Image.BILINEAR)
+    array = np.asarray(image, dtype=np.float32) / 255.0
+    array = (array - 0.5) / 0.5
+    array = array.transpose(2, 0, 1)  # HWC -> CHW
+    return array[np.newaxis, ...]  # add batch dim
 
 
-# ============================================================================
-# MODEL LOADING
-# ============================================================================
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-model = Discriminator().to(device)
-checkpoint = torch.load(MODEL_PATH, map_location=device)
-model.load_state_dict(checkpoint["model_state_dict"])
-model.eval()
-
-# Same normalization used for val/test data in detector.py
-transform = transforms.Compose([
-    transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
-])
-
-
-# ============================================================================
-# PREDICTION
-# ============================================================================
 def predict(image):
     if image is None:
         return None
 
-    img_tensor = transform(image.convert("RGB")).unsqueeze(0).to(device)
-
-    with torch.no_grad():
-        prob_real = model(img_tensor).item()
+    input_tensor = preprocess(image)
+    prob_real = float(session.run(None, {input_name: input_tensor})[0].item())
 
     return {
         "Real": prob_real,
@@ -145,7 +67,6 @@ demo = gr.Interface(
 )
 
 if __name__ == "__main__":
-    # Render (and most PaaS hosts) assign the port via $PORT and expect the
-    # server to listen on 0.0.0.0, not just localhost.
+    import os
     port = int(os.environ.get("PORT", 7860))
     demo.launch(server_name="0.0.0.0", server_port=port)
