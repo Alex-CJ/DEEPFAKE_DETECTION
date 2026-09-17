@@ -122,7 +122,11 @@ THEME = gr.themes.Base(
 )
 
 CSS = """
-.gradio-container { max-width: 860px !important; }
+.gradio-container {
+    max-width: 860px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
 
 .hero { margin-bottom: 0.5rem; }
 .hero-title {
