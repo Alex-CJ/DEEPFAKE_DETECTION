@@ -38,49 +38,144 @@ def predict(image):
 
     return {
         "Real": prob_real,
-        "AI-Generated / Fake": 1 - prob_real,
+        "AI-generated": 1 - prob_real,
     }
 
 
-DESCRIPTION = """
-Upload a face photo and the model estimates whether it is a **real** photo
-or an **AI-generated / GAN-produced** face.
-
-This is the discriminator from a DCGAN-style network (with a self-attention
-layer), trained from scratch adversarially and then fine-tuned on the
-[140k Real and Fake Faces](https://www.kaggle.com/datasets/xhlulu/140k-real-and-fake-faces)
-dataset. On its held-out test set it reached **92.9% accuracy** and an
-**AUC-ROC of 0.982**.
-
-Don't have an image handy? Click one of the examples below — they're held-out
-validation images from the same dataset (first 3 real, last 3 AI-generated).
-
-**Limitations:** the model was trained on 64x64 face crops from GAN-generated
-(mostly StyleGAN-style) images. Accuracy may be lower on non-face images, on
-much higher resolution inputs, or on images produced by newer generators
-(e.g. diffusion models) that it never saw during training.
+HERO_HTML = """
+<div class="hero">
+  <h1 class="hero-title">Deepfake Face Detector</h1>
+  <p class="hero-sub">
+    Upload a face photo and the model tells you whether it's a real
+    photograph or an AI-generated one. It's the discriminator from a
+    DCGAN-style network, trained adversarially from scratch and then
+    fine-tuned on the
+    <a href="https://www.kaggle.com/datasets/xhlulu/140k-real-and-fake-faces" target="_blank" rel="noopener">140k Real and Fake Faces</a>
+    dataset &mdash; 92.9% accuracy and 0.982 AUC-ROC on a 20,000-image
+    held-out test set.
+  </p>
+</div>
 """
 
-EXAMPLES = [
-    "examples/real_1.jpg",
-    "examples/real_2.jpg",
-    "examples/real_3.jpg",
-    "examples/fake_1.jpg",
-    "examples/fake_2.jpg",
-    "examples/fake_3.jpg",
-]
+LIMITS_HTML = """
+<p class="hero-note">
+  Trained on 64&times;64 face crops with no exposure to real-world
+  artifacts like compression or motion blur, so accuracy on
+  higher-resolution photos or newer generators (diffusion models,
+  for instance) is untested.
+</p>
+"""
 
-demo = gr.Interface(
-    fn=predict,
-    inputs=gr.Image(type="pil", label="Upload a face image"),
-    outputs=gr.Label(num_top_classes=2, label="Prediction"),
-    title="Deepfake Face Detector",
-    description=DESCRIPTION,
-    examples=EXAMPLES,
-    cache_examples=False,
+REAL_EXAMPLES = ["examples/real_1.jpg", "examples/real_2.jpg", "examples/real_3.jpg"]
+FAKE_EXAMPLES = ["examples/fake_1.jpg", "examples/fake_2.jpg", "examples/fake_3.jpg"]
+
+def _both(**tokens):
+    """Force the same value in light and dark mode - this page has one
+    deliberate identity and shouldn't flip to Gradio's default dark theme
+    on visitors with a dark OS preference."""
+    out = {}
+    for key, value in tokens.items():
+        out[key] = value
+        out[f"{key}_dark"] = value
+    return out
+
+
+THEME = gr.themes.Base(
+    font=[gr.themes.GoogleFont("IBM Plex Sans"), "sans-serif"],
+    font_mono=[gr.themes.GoogleFont("IBM Plex Mono"), "monospace"],
+).set(
+    **_both(
+        body_background_fill="#EEF0EA",
+        body_text_color="#14181A",
+        body_text_color_subdued="#4B5049",
+        background_fill_primary="#EEF0EA",
+        background_fill_secondary="#E4E7DD",
+        block_background_fill="#F6F7F2",
+        block_border_color="#C3C9B8",
+        block_label_background_fill="#F6F7F2",
+        block_label_text_color="#4B5049",
+        block_title_text_color="#14181A",
+        panel_background_fill="#E4E7DD",
+        panel_border_color="#C3C9B8",
+        color_accent_soft="#DEE6DB",
+        border_color_accent="#1F6F52",
+        border_color_accent_subdued="#9FB09F",
+        button_primary_background_fill="#1F6F52",
+        button_primary_background_fill_hover="#195A43",
+        button_primary_text_color="#F6F7F2",
+        button_primary_border_color="#1F6F52",
+        button_secondary_background_fill="#F6F7F2",
+        button_secondary_border_color="#C3C9B8",
+        button_secondary_text_color="#14181A",
+        input_background_fill="#FFFFFF",
+        input_border_color="#C3C9B8",
+    ),
+    color_accent="#1F6F52",
+    block_border_width="1px",
+    block_label_text_weight="500",
+    block_radius="4px",
+    block_shadow="none",
+    button_large_radius="4px",
+    input_radius="4px",
+    layout_gap="20px",
+    block_padding="18px",
 )
+
+CSS = """
+.gradio-container { max-width: 860px !important; }
+
+.hero { margin-bottom: 0.5rem; }
+.hero-title {
+    font-size: 2.25rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: #14181A;
+    margin: 0 0 0.6rem 0;
+}
+.hero-sub {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: #3B4038;
+    max-width: 66ch;
+    margin: 0;
+}
+.hero-sub a { color: #1F6F52; }
+
+.hero-note {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: #5B6156;
+    max-width: 66ch;
+    margin: 0.25rem 0 0 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid #C3C9B8;
+}
+"""
+
+with gr.Blocks(title="Deepfake Face Detector") as demo:
+    gr.HTML(HERO_HTML)
+
+    with gr.Row(equal_height=True):
+        with gr.Column(scale=1):
+            image_input = gr.Image(type="pil", label="Upload a face photo")
+            check_button = gr.Button("Check photo", variant="primary")
+        with gr.Column(scale=1):
+            result_output = gr.Label(num_top_classes=2, label="Result")
+
+    check_button.click(fn=predict, inputs=image_input, outputs=result_output)
+
+    with gr.Row():
+        with gr.Column():
+            gr.Examples(examples=REAL_EXAMPLES, inputs=image_input, examples_per_page=3,
+                        label="Real photographs")
+        with gr.Column():
+            gr.Examples(examples=FAKE_EXAMPLES, inputs=image_input, examples_per_page=3,
+                        label="AI-generated photographs")
+
+    gr.HTML(LIMITS_HTML)
 
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 7860))
-    demo.launch(server_name="0.0.0.0", server_port=port)
+    demo.launch(server_name="0.0.0.0", server_port=port, theme=THEME, css=CSS)
