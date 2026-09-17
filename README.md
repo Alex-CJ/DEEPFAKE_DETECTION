@@ -88,6 +88,16 @@ python detector.py --mode train --data_dir data --epochs 20 --batch_size 32
 python detector.py --mode evaluate --model_path models/best_detector.pth
 ```
 
+Download the [140k Real and Fake Faces](https://www.kaggle.com/datasets/xhlulu/140k-real-and-fake-faces)
+dataset and arrange it as:
+
+```
+data/
+├── train/{real,fake}/
+├── val/{real,fake}/
+└── test/{real,fake}/
+```
+
 ## Tech stack
 
 PyTorch · Gradio · scikit-learn · Render (deployment)
