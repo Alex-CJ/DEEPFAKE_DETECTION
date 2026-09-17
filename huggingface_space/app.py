@@ -68,6 +68,8 @@ LIMITS_HTML = """
 
 REAL_EXAMPLES = ["examples/real_1.jpg", "examples/real_2.jpg", "examples/real_3.jpg"]
 FAKE_EXAMPLES = ["examples/fake_1.jpg", "examples/fake_2.jpg", "examples/fake_3.jpg"]
+MORE_REAL_EXAMPLES = [f"examples/real_{i}.jpg" for i in range(4, 10)]
+MORE_FAKE_EXAMPLES = [f"examples/fake_{i}.jpg" for i in range(4, 10)]
 
 def _both(**tokens):
     """Force the same value in light and dark mode - this page has one
@@ -173,9 +175,15 @@ with gr.Blocks(title="Deepfake Face Detector") as demo:
         with gr.Column():
             gr.Examples(examples=REAL_EXAMPLES, inputs=image_input, examples_per_page=3,
                         label="Real photographs")
+            with gr.Accordion("More real photographs", open=False):
+                gr.Examples(examples=MORE_REAL_EXAMPLES, inputs=image_input,
+                            examples_per_page=6)
         with gr.Column():
             gr.Examples(examples=FAKE_EXAMPLES, inputs=image_input, examples_per_page=3,
                         label="AI-generated photographs")
+            with gr.Accordion("More AI-generated photographs", open=False):
+                gr.Examples(examples=MORE_FAKE_EXAMPLES, inputs=image_input,
+                            examples_per_page=6)
 
     gr.HTML(LIMITS_HTML)
 
