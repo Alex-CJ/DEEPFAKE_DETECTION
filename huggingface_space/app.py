@@ -52,11 +52,23 @@ layer), trained from scratch adversarially and then fine-tuned on the
 dataset. On its held-out test set it reached **92.9% accuracy** and an
 **AUC-ROC of 0.982**.
 
+Don't have an image handy? Click one of the examples below — they're held-out
+validation images from the same dataset (first 3 real, last 3 AI-generated).
+
 **Limitations:** the model was trained on 64x64 face crops from GAN-generated
 (mostly StyleGAN-style) images. Accuracy may be lower on non-face images, on
 much higher resolution inputs, or on images produced by newer generators
 (e.g. diffusion models) that it never saw during training.
 """
+
+EXAMPLES = [
+    "examples/real_1.jpg",
+    "examples/real_2.jpg",
+    "examples/real_3.jpg",
+    "examples/fake_1.jpg",
+    "examples/fake_2.jpg",
+    "examples/fake_3.jpg",
+]
 
 demo = gr.Interface(
     fn=predict,
@@ -64,6 +76,8 @@ demo = gr.Interface(
     outputs=gr.Label(num_top_classes=2, label="Prediction"),
     title="Deepfake Face Detector",
     description=DESCRIPTION,
+    examples=EXAMPLES,
+    cache_examples=False,
 )
 
 if __name__ == "__main__":
